@@ -1,28 +1,25 @@
 <!DOCTYPE html>
-<html lang="fr" class="h-full bg-slate-900 text-slate-100">
+<html lang="fr" class="h-full bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Erasmus Live Translator - Traduction de Cours en Direct</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Erasmus Live Translator - Traduction Mobile de Cours</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
           animation: {
             'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             'wave': 'wave 1.2s ease-in-out infinite',
           },
           keyframes: {
             wave: {
-              '0%, 100%': { height: '8px' },
-              '50%': { height: '28px' },
+              '0%, 100%': { height: '6px' },
+              '50%': { height: '22px' },
             }
           }
         }
@@ -30,226 +27,168 @@
     }
   </script>
   <style>
-    /* Custom Scrollbar for live subtitles and history */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.6);
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(51, 65, 85, 0.8);
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(71, 85, 105, 1);
-    }
+    /* Safe area padding for modern iPhones & Androids */
+    .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    /* Mobile custom scrollbars */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.5); border-radius: 4px; }
   </style>
 </head>
-<body class="h-full flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+<body class="h-full flex flex-col font-sans antialiased overflow-x-hidden">
 
-  <!-- Header -->
-  <header class="bg-slate-950/80 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-es-yellow flex items-center justify-center shadow-lg shadow-indigo-500/20">
-          <i class="fa-solid font-bold text-white text-lg">🇪🇸➜🇫🇷</i>
-        </div>
-        <div>
-          <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
-            Erasmus Live Translate
-          </h1>
-          <p class="text-xs text-slate-400 hidden sm:block">Traduction simultanée de cours en direct</p>
+  <!-- Mobile & Desktop Sticky Header -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 h-14 flex items-center justify-between shrink-0">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-400 flex items-center justify-center font-bold text-xs shadow-md">
+        🇪🇸➜🇫🇷
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white leading-tight">Erasmus Translate</h1>
+        <div class="flex items-center space-x-1.5">
+          <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+          <span id="statusText" class="text-[10px] text-slate-400 font-medium">Prêt</span>
         </div>
       </div>
+    </div>
 
-      <!-- Quick Controls Header -->
-      <div class="flex items-center space-x-3">
-        <!-- Gemini API Key Modal Trigger -->
-        <button id="apiKeyBtn" onclick="openApiKeyModal()" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition flex items-center space-x-2">
-          <i class="fa-solid fa-key text-amber-400"></i>
-          <span id="apiKeyStatusText" class="hidden sm:inline">Clé Gemini (Optionnel)</span>
-        </button>
-
-        <button onclick="toggleFontSize()" title="Agrandir la taille du texte" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition">
-          <i class="fa-solid fa-text-height text-base"></i>
-        </button>
-      </div>
+    <!-- Quick Tools Header Buttons -->
+    <div class="flex items-center space-x-1.5">
+      <button onclick="toggleFontSize()" title="Taille du texte" class="p-2 text-slate-400 hover:text-white bg-slate-800/80 active:bg-slate-700 rounded-lg text-xs">
+        <i class="fa-solid fa-text-height"></i>
+      </button>
+      <button onclick="openApiKeyModal()" title="Clé Gemini API" class="px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 flex items-center space-x-1">
+        <i class="fa-solid fa-key text-amber-400"></i>
+        <span id="apiKeyStatusText" class="text-[11px]">Gemini</span>
+      </button>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+  <!-- Mobile Viewport Navigation Bar (Onglets Mobile Direct / Notes) -->
+  <div class="flex border-b border-slate-800 bg-slate-900 shrink-0">
+    <button id="tabLiveBtn" onclick="switchTab('live')" class="flex-1 py-2.5 text-xs font-bold text-indigo-400 border-b-2 border-indigo-500 flex items-center justify-center space-x-2">
+      <i class="fa-solid fa-tower-broadcast"></i>
+      <span>En Direct</span>
+    </button>
+    <button id="tabHistoryBtn" onclick="switchTab('history')" class="flex-1 py-2.5 text-xs font-bold text-slate-400 border-b-2 border-transparent flex items-center justify-center space-x-2">
+      <i class="fa-solid fa-book-open"></i>
+      <span>Notes de Cours</span>
+      <span id="historyBadge" class="bg-indigo-900 text-indigo-200 text-[10px] px-1.5 py-0.2 rounded-full">0</span>
+    </button>
+  </div>
+
+  <!-- Main Scrollable Content Area -->
+  <main class="flex-1 overflow-hidden p-3 sm:p-5 max-w-5xl w-full mx-auto flex flex-col">
     
-    <!-- Left Column: Controls & Live Display -->
-    <section class="lg:col-span-8 flex flex-col space-y-5 overflow-hidden">
+    <!-- SECTION 1: LIVE DIRECT SUBTITLES VIEW -->
+    <div id="viewLive" class="flex-1 flex flex-col space-y-3 h-full overflow-hidden">
       
-      <!-- Top Control Bar -->
-      <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 shadow-xl backdrop-blur-sm flex flex-wrap items-center justify-between gap-4">
-        
-        <!-- Language Selectors -->
-        <div class="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-start">
-          <!-- Source Lang -->
-          <div class="flex flex-col">
-            <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Langue Écoutée</label>
-            <select id="sourceLang" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-medium text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-              <option value="es-ES" selected>🇪🇸 Espagnol (Espagne)</option>
-              <option value="es-MX">🇲🇽 Espagnol (Mexique)</option>
-              <option value="en-US">🇺🇸 Anglais</option>
-              <option value="de-DE">🇩🇪 Allemand</option>
-              <option value="it-IT">🇮🇹 Italien</option>
-              <option value="fr-FR">🇫🇷 Français</option>
-            </select>
-          </div>
-
-          <div class="pt-4 text-slate-500">
-            <i class="fa-solid fa-arrow-right-long"></i>
-          </div>
-
-          <!-- Target Lang -->
-          <div class="flex flex-col">
-            <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Traduire En</label>
-            <select id="targetLang" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-medium text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-              <option value="fr" selected>🇫🇷 Français</option>
-              <option value="es">🇪🇸 Espagnol</option>
-              <option value="en">🇬🇧 Anglais</option>
-              <option value="de">🇩🇪 Allemand</option>
-              <option value="it">🇮🇹 Italien</option>
-            </select>
-          </div>
+      <!-- Top Settings Strip -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs shrink-0">
+        <div class="flex items-center space-x-2">
+          <span class="text-slate-400 font-medium">Écoute:</span>
+          <select id="sourceLang" class="bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-slate-200 focus:outline-none">
+            <option value="es-ES" selected>🇪🇸 Espagnol</option>
+            <option value="en-US">🇺🇸 Anglais</option>
+            <option value="de-DE">🇩🇪 Allemand</option>
+            <option value="it-IT">🇮🇹 Italien</option>
+          </select>
         </div>
 
-        <!-- Translation Engine Switcher -->
-        <div class="flex items-center space-x-2 bg-slate-900/80 p-1.5 border border-slate-700/80 rounded-xl">
-          <button id="engineFastBtn" onclick="setEngine('fast')" class="px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition shadow-sm">
-            Ultra-Rapide (Gratuit)
+        <div class="flex items-center space-x-1.5">
+          <button id="engineFastBtn" onclick="setEngine('fast')" class="px-2 py-1 text-[11px] font-semibold rounded-md bg-indigo-600 text-white">
+            Rapide
           </button>
-          <button id="engineGeminiBtn" onclick="setEngine('gemini')" class="px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition">
-            Gemini AI (Académique)
+          <button id="engineGeminiBtn" onclick="setEngine('gemini')" class="px-2 py-1 text-[11px] font-semibold rounded-md text-slate-400">
+            Gemini
           </button>
         </div>
       </div>
 
-      <!-- Live Subtitle Box (The main screen) -->
-      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-6 flex-1 flex flex-col justify-between shadow-2xl relative overflow-hidden min-h-[360px]">
+      <!-- Live Dual Subtitles Screen -->
+      <div class="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col justify-between overflow-hidden shadow-2xl relative">
         
-        <!-- Status Indicator Bar -->
-        <div class="flex items-center justify-between border-b border-slate-800/80 pb-3 mb-4">
-          <div class="flex items-center space-x-3">
-            <span id="statusBadge" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400">
-              <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-500 mr-2"></span>
-              <span id="statusText">Prêt à écouter</span>
-            </span>
-            
-            <!-- Audio Wave Visualizer (when listening) -->
-            <div id="audioWave" class="hidden items-center space-x-1 h-6">
-              <span class="w-1 bg-indigo-500 rounded-full animate-wave" style="animation-delay: 0.1s"></span>
-              <span class="w-1 bg-indigo-400 rounded-full animate-wave" style="animation-delay: 0.3s"></span>
-              <span class="w-1 bg-indigo-600 rounded-full animate-wave" style="animation-delay: 0.2s"></span>
-              <span class="w-1 bg-indigo-300 rounded-full animate-wave" style="animation-delay: 0.4s"></span>
-            </div>
-          </div>
-
-          <!-- Display Action Quick Tools -->
-          <div class="flex items-center space-x-2">
-            <button onclick="clearCurrentBox()" class="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition" title="Effacer l'affichage">
-              <i class="fa-solid fa-eraser text-sm"></i>
-            </button>
-            <button onclick="toggleAutoScroll()" id="autoScrollBtn" class="px-2.5 py-1 text-xs font-medium bg-indigo-950 text-indigo-300 border border-indigo-800/50 rounded-lg transition">
-              <i class="fa-solid fa-arrow-down-short-wide mr-1"></i> Auto-Défilement: ON
-            </button>
-          </div>
+        <!-- Animated Audio Wave -->
+        <div id="audioWave" class="hidden absolute top-3 right-4 items-center space-x-1 h-5">
+          <span class="w-1 bg-emerald-400 rounded-full animate-wave" style="animation-delay: 0.1s"></span>
+          <span class="w-1 bg-emerald-500 rounded-full animate-wave" style="animation-delay: 0.3s"></span>
+          <span class="w-1 bg-emerald-300 rounded-full animate-wave" style="animation-delay: 0.2s"></span>
         </div>
 
-        <!-- Text Display Container (Scrollable) -->
-        <div id="subtitleScrollArea" class="flex-1 overflow-y-auto pr-2 space-y-6 max-h-[420px] transition-all">
-          
-          <!-- Original Speech Container -->
-          <div class="space-y-1">
-            <div class="flex items-center justify-between text-xs font-semibold text-amber-400 uppercase tracking-wider">
-              <span><i class="fa-solid fa-ear-listen mr-1.5"></i> Texte original écouté en direct</span>
-              <span id="speechConfidence" class="text-[10px] text-slate-500 font-mono"></span>
+        <div id="subtitleScrollArea" class="flex-1 overflow-y-auto pr-1 space-y-4">
+          <!-- Spanish Original Speech Box -->
+          <div>
+            <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-1 flex items-center">
+              <i class="fa-solid fa-ear-listen mr-1.5"></i> Espagnol (Direct)
             </div>
-            <p id="liveOriginalText" class="text-slate-300 font-sans text-lg sm:text-xl leading-relaxed italic min-h-[4rem] transition-all">
-              Appuyez sur le bouton vert ci-dessous et commencez le cours. Les paroles du professeur apparaîtront ici...
+            <p id="liveOriginalText" class="text-slate-300 text-base sm:text-lg italic leading-relaxed min-h-[3rem]">
+              Appuyez sur le gros bouton vert en bas pour commencer l'écoute du professeur.
             </p>
           </div>
 
-          <!-- Translated Speech Container -->
-          <div class="border-t border-slate-800/80 pt-4 space-y-1">
-            <div class="flex items-center justify-between text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-              <span><i class="fa-solid fa-language mr-1.5"></i> Traduction instantanée</span>
-              <button onclick="speakTranslation()" class="text-slate-400 hover:text-emerald-400 text-xs flex items-center space-x-1">
-                <i class="fa-solid fa-volume-high"></i>
-                <span>Écouter</span>
+          <!-- French Live Translation Box -->
+          <div class="border-t border-slate-800 pt-3">
+            <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span><i class="fa-solid fa-language mr-1.5"></i> Traduction Française</span>
+              <button onclick="speakTranslation()" class="text-slate-400 hover:text-emerald-400 text-xs">
+                <i class="fa-solid fa-volume-high mr-1"></i>Écouter
               </button>
             </div>
-            <p id="liveTranslatedText" class="text-white font-semibold text-xl sm:text-2xl leading-relaxed min-h-[5rem] transition-all">
-              La traduction en français s'affichera mot à mot ici.
+            <p id="liveTranslatedText" class="text-white font-bold text-xl sm:text-2xl leading-relaxed min-h-[4.5rem]">
+              La traduction en français apparaîtra ici en temps réel.
             </p>
           </div>
         </div>
 
-        <!-- Floating Mic Action Button Bar -->
-        <div class="pt-6 border-t border-slate-800/80 flex items-center justify-center">
-          <button id="toggleRecordBtn" onclick="toggleRecording()" class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-300 bg-emerald-600 rounded-full hover:bg-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-800 shadow-xl shadow-emerald-900/30 hover:scale-105 active:scale-95 w-full sm:w-auto min-w-[260px]">
-            <i id="recordIcon" class="fa-solid fa-microphone text-2xl mr-3"></i>
-            <span id="recordBtnText">Démarrer l'Écoute du Cours</span>
+        <div class="pt-2 text-right">
+          <button onclick="clearCurrentBox()" class="text-[11px] text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-eraser mr-1"></i>Effacer l'écran
           </button>
         </div>
-
       </div>
-    </section>
+    </div>
 
-    <!-- Right Column: Live Transcript Notes & Lecture History -->
-    <section class="lg:col-span-4 flex flex-col bg-slate-800/50 border border-slate-700/60 rounded-2xl p-5 shadow-xl backdrop-blur-sm overflow-hidden h-[500px] lg:h-auto">
-      
-      <!-- Panel Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-slate-700/80 mb-4">
+    <!-- SECTION 2: TRANSCRIPT / COURSE NOTES VIEW -->
+    <div id="viewHistory" class="hidden flex-1 flex-col h-full overflow-hidden space-y-3">
+      <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl p-3 shrink-0">
+        <span class="text-xs font-bold text-slate-300"><i class="fa-solid fa-file-lines mr-1.5 text-indigo-400"></i>Historique du cours</span>
         <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i>
-          <h2 class="font-bold text-slate-200">Notes du Cours (Historique)</h2>
+          <button onclick="copyFullTranscript()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700">
+            <i class="fa-solid fa-copy mr-1"></i>Copier
+          </button>
+          <button onclick="downloadTranscript()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg shadow">
+            <i class="fa-solid fa-download mr-1"></i>Sauvegarder
+          </button>
         </div>
-        <span id="historyCount" class="text-xs bg-slate-700 px-2 py-0.5 rounded-full text-slate-300 font-mono">0</span>
       </div>
 
-      <!-- History List Container -->
-      <div id="historyList" class="flex-1 overflow-y-auto space-y-3 pr-1">
-        <!-- Empty State -->
+      <!-- Scrollable Course History List -->
+      <div id="historyList" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
         <div id="emptyHistory" class="text-center py-12 text-slate-500">
-          <i class="fa-solid fa-book-open text-3xl mb-3 block opacity-40"></i>
-          <p class="text-xs">Les blocs de phrases traduites s'enregistreront automatiquement ici pendant le cours.</p>
+          <i class="fa-solid fa-book-open text-3xl mb-2 block opacity-30"></i>
+          <p class="text-xs">Chaque phrase traduite pendant le cours s'enregistrera automatiquement ici.</p>
         </div>
       </div>
+    </div>
 
-      <!-- Bottom Panel Controls (Copy / Clear / Export) -->
-      <div class="pt-4 border-t border-slate-700/80 flex items-center justify-between gap-2">
-        <button onclick="copyFullTranscript()" class="flex-1 py-2 px-3 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-medium transition flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-copy"></i>
-          <span>Copier Tout</span>
-        </button>
-        
-        <button onclick="downloadTranscript()" class="flex-1 py-2 px-3 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg text-xs font-medium transition flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-download"></i>
-          <span>Télécharger</span>
-        </button>
-
-        <button onclick="clearHistory()" class="p-2 bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-400 rounded-lg transition" title="Effacer l'historique">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
-      </div>
-    </section>
   </main>
 
-  <!-- Gemini API Key Modal -->
+  <!-- STICKY MOBILE BOTTOM RECORDING BAR -->
+  <div class="bg-slate-900/95 border-t border-slate-800 p-3 sm:p-4 pb-safe sticky bottom-0 z-50 backdrop-blur-md shrink-0">
+    <div class="max-w-md mx-auto">
+      <button id="toggleRecordBtn" onclick="toggleRecording()" class="w-full py-3.5 sm:py-4 px-6 rounded-full font-bold text-white text-base sm:text-lg flex items-center justify-center space-x-3 bg-emerald-600 active:bg-emerald-700 shadow-lg shadow-emerald-900/40 transition-all duration-200">
+        <i id="recordIcon" class="fa-solid fa-microphone text-xl sm:text-2xl"></i>
+        <span id="recordBtnText">Démarrer l'Écoute du Cours</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- API Key Modal -->
   <div id="apiKeyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
           <i class="fa-solid fa-key text-amber-400"></i>
-          <span>Configuration Clé API Gemini</span>
+          <span>Clé API Gemini</span>
         </h3>
         <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-white">
           <i class="fa-solid fa-xmark text-lg"></i>
@@ -257,45 +196,37 @@
       </div>
 
       <p class="text-xs text-slate-300 leading-relaxed">
-        Par défaut, l'application utilise un service de traduction gratuit instantané. Pour des traductions universitaires encore plus précises et contextuelles via l'IA de Google Gemini, collez votre propre clé API ci-dessous.
+        Ajoutez votre clé API Google Gemini pour des traductions académiques plus précises contextuellement.
       </p>
 
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1">Clé API Google Gemini</label>
-        <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
+        <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono">
       </div>
 
-      <div class="flex items-center justify-end space-x-3 pt-2">
-        <button onclick="closeApiKeyModal()" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white">Annuler</button>
-        <button onclick="saveApiKey()" class="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg transition">Enregistrer</button>
+      <div class="flex items-center justify-end space-x-2 pt-1">
+        <button onclick="closeApiKeyModal()" class="px-3 py-1.5 text-xs text-slate-400">Annuler</button>
+        <button onclick="saveApiKey()" class="px-4 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-xl">Sauvegarder</button>
       </div>
     </div>
   </div>
 
   <!-- Toast Notification -->
-  <div id="toast" class="fixed bottom-5 right-5 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-2xl text-sm font-medium transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none flex items-center space-x-2 z-50">
+  <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-2.5 rounded-full shadow-2xl text-xs font-semibold transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none flex items-center space-x-2 z-50 whitespace-nowrap">
     <i id="toastIcon" class="fa-solid fa-circle-check"></i>
     <span id="toastMessage">Notification</span>
   </div>
 
   <!-- Application Logic -->
   <script>
-    // State variables
     let isRecording = false;
     let recognition = null;
-    let currentEngine = 'fast'; // 'fast' or 'gemini'
+    let currentEngine = 'fast';
     let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
-    let autoScroll = true;
     let history = [];
     let fontSizeLarge = false;
-    
-    // Translation Buffers
-    let interimOriginalText = '';
     let finalOriginalText = '';
-    let currentTranslation = '';
     let translationTimeout = null;
 
-    // Initialize Web Speech Recognition
     window.onload = function() {
       checkSpeechRecognitionSupport();
       updateApiKeyStatusUI();
@@ -304,9 +235,9 @@
     function checkSpeechRecognitionSupport() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        showToast("Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Google Chrome.", "error");
+        showToast("Navigateur non compatible. Utilisez Google Chrome sur Android ou Safari sur iOS.", "error");
         document.getElementById('toggleRecordBtn').disabled = true;
-        document.getElementById('statusText').innerText = "Navigateur Incompatible";
+        document.getElementById('statusText').innerText = "Incompatible";
         return;
       }
 
@@ -318,27 +249,20 @@
       recognition.onstart = function() {
         isRecording = true;
         updateRecordingUI(true);
-        showToast("Écoute du cours démarrée");
+        showToast("Écoute active");
       };
 
       recognition.onerror = function(event) {
         console.error("Speech Recognition Error:", event.error);
         if (event.error === 'not-allowed') {
-          showToast("Permission du micro refusée. Autorisez le microphone.", "error");
+          showToast("Veuillez autoriser l'accès au microphone", "error");
           stopRecording();
-        } else if (event.error === 'no-speech') {
-          // Keep listening silently
         }
       };
 
       recognition.onend = function() {
-        // Auto restart if still supposed to be recording (handles Chrome automatic timeouts)
         if (isRecording) {
-          try {
-            recognition.start();
-          } catch(e) {
-            console.log("Restarting recognition...");
-          }
+          try { recognition.start(); } catch(e) {}
         } else {
           updateRecordingUI(false);
         }
@@ -356,119 +280,85 @@
           }
         }
 
-        // Live updating UI for original text
         const displayOriginal = (finalOriginalText + ' ' + finalTranscriptChunk + interimTranscript).trim();
         document.getElementById('liveOriginalText').innerText = displayOriginal || "En attente de paroles...";
 
-        // Trigger real-time translation with debounce for interim, or immediate for final
         const textToTranslate = (finalTranscriptChunk + interimTranscript).trim();
         if (textToTranslate) {
           debouncedTranslate(textToTranslate, event.results[event.results.length - 1].isFinal);
         }
 
-        // Handle final sentence completion (Append to course history)
         if (finalTranscriptChunk.trim()) {
           finalOriginalText += finalTranscriptChunk;
-          const chunkToTranslate = finalTranscriptChunk.trim();
-          
-          translateText(chunkToTranslate).then(translatedChunk => {
+          const chunk = finalTranscriptChunk.trim();
+          translateText(chunk).then(translatedChunk => {
             if (translatedChunk) {
-              addHistoryItem(chunkToTranslate, translatedChunk);
+              addHistoryItem(chunk, translatedChunk);
             }
           });
         }
-
-        if (autoScroll) {
-          scrollToBottom();
-        }
+        scrollToBottom();
       };
     }
 
-    // Toggle Recording State
     function toggleRecording() {
       if (!recognition) {
         checkSpeechRecognitionSupport();
         if (!recognition) return;
       }
-
-      if (isRecording) {
-        stopRecording();
-      } else {
-        startRecording();
-      }
+      if (isRecording) stopRecording(); else startRecording();
     }
 
     function startRecording() {
-      const sourceLang = document.getElementById('sourceLang').value;
-      recognition.lang = sourceLang;
-      try {
-        recognition.start();
-      } catch(e) {
-        console.error("Start error:", e);
-      }
+      recognition.lang = document.getElementById('sourceLang').value;
+      try { recognition.start(); } catch(e) {}
     }
 
     function stopRecording() {
       isRecording = false;
-      if (recognition) {
-        recognition.stop();
-      }
+      if (recognition) recognition.stop();
       updateRecordingUI(false);
       showToast("Écoute mise en pause");
     }
 
-    // Debounced Translation for Real-Time smooth experience
     function debouncedTranslate(text, isFinal) {
       clearTimeout(translationTimeout);
       translationTimeout = setTimeout(() => {
         translateText(text).then(translated => {
           if (translated) {
             document.getElementById('liveTranslatedText').innerText = translated;
-            if (autoScroll) scrollToBottom();
+            scrollToBottom();
           }
         });
       }, isFinal ? 100 : 350);
     }
 
-    // Translation Routing (Fast Engine vs Gemini Engine)
     async function translateText(text) {
-      if (!text || text.length === 0) return '';
-      
-      const targetLang = document.getElementById('targetLang').value;
-      const sourceLang = document.getElementById('sourceLang').value.split('-')[0];
-
+      if (!text) return '';
+      const source = document.getElementById('sourceLang').value.split('-')[0];
       if (currentEngine === 'gemini') {
-        return await translateWithGemini(text, sourceLang, targetLang);
+        return await translateWithGemini(text, source, 'fr');
       } else {
-        return await translateWithMyMemory(text, sourceLang, targetLang);
+        return await translateWithMyMemory(text, source, 'fr');
       }
     }
 
-    // Free Fast Translation API (MyMemory / LibreTranslate fallback)
     async function translateWithMyMemory(text, source, target) {
       try {
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
         const response = await fetch(url);
         const data = await response.json();
-        if (data && data.responseData) {
-          return data.responseData.translatedText;
-        }
-      } catch (err) {
-        console.error("Fast translation error:", err);
-      }
-      return text; // Fallback
+        if (data && data.responseData) return data.responseData.translatedText;
+      } catch (err) {}
+      return text;
     }
 
-    // Gemini API High-Fidelity Academic Translation
     async function translateWithGemini(text, source, target) {
-      const apiKey = geminiApiKey || ""; // Canvas auto-injects if blank in certain runtime setups
+      const apiKey = geminiApiKey || "";
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-      const systemPrompt = `Tu es un traducteur universitaire expert simultané. Traduis fidèlement ce texte oral issu d'un cours en espagnol vers le français de manière fluide, naturelle et académique. Réponds SEULEMENT avec la traduction exacte.`;
-
       const payload = {
         contents: [{ parts: [{ text: text }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] }
+        systemInstruction: { parts: [{ text: "Tu es un traducteur simultané universitaire. Traduis fidèlement ce texte espagnol vers le français. Réponds UNIQUEMENT avec la traduction." }] }
       };
 
       try {
@@ -477,181 +367,154 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-
         const data = await response.json();
         const candidate = data.candidates?.[0];
         if (candidate && candidate.content?.parts?.[0]?.text) {
           return candidate.content.parts[0].text.trim();
         }
       } catch (e) {
-        console.error("Gemini Translation Error:", e);
-        // Fallback to fast engine on failure
         return await translateWithMyMemory(text, source, target);
       }
       return text;
     }
 
-    // UI Updates for Recording
     function updateRecordingUI(recording) {
       const btn = document.getElementById('toggleRecordBtn');
       const icon = document.getElementById('recordIcon');
       const text = document.getElementById('recordBtnText');
-      const badge = document.getElementById('statusBadge');
       const dot = document.getElementById('statusDot');
       const statusText = document.getElementById('statusText');
       const wave = document.getElementById('audioWave');
 
       if (recording) {
-        btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500', 'shadow-emerald-900/30');
-        btn.classList.add('bg-rose-600', 'hover:bg-rose-500', 'shadow-rose-900/30', 'animate-pulse-fast');
-        icon.className = "fa-solid fa-circle-stop text-2xl mr-3";
+        btn.className = "w-full py-3.5 sm:py-4 px-6 rounded-full font-bold text-white text-base sm:text-lg flex items-center justify-center space-x-3 bg-rose-600 active:bg-rose-700 shadow-lg shadow-rose-900/40 animate-pulse-fast transition-all duration-200";
+        icon.className = "fa-solid fa-circle-stop text-xl sm:text-2xl";
         text.innerText = "Arrêter l'Écoute";
-
-        badge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950 text-emerald-400 border border-emerald-800";
-        dot.className = "w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping";
-        statusText.innerText = "Écoute du professeur en cours...";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+        statusText.innerText = "En écoute...";
         wave.classList.remove('hidden');
         wave.classList.add('flex');
       } else {
-        btn.classList.remove('bg-rose-600', 'hover:bg-rose-500', 'shadow-rose-900/30', 'animate-pulse-fast');
-        btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500', 'shadow-emerald-900/30');
-        icon.className = "fa-solid fa-microphone text-2xl mr-3";
+        btn.className = "w-full py-3.5 sm:py-4 px-6 rounded-full font-bold text-white text-base sm:text-lg flex items-center justify-center space-x-3 bg-emerald-600 active:bg-emerald-700 shadow-lg shadow-emerald-900/40 transition-all duration-200";
+        icon.className = "fa-solid fa-microphone text-xl sm:text-2xl";
         text.innerText = "Démarrer l'Écoute du Cours";
-
-        badge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400";
-        dot.className = "w-2 h-2 rounded-full bg-slate-500 mr-2";
+        dot.className = "w-2 h-2 rounded-full bg-slate-500";
         statusText.innerText = "En pause";
         wave.classList.add('hidden');
         wave.classList.remove('flex');
       }
     }
 
-    // Engine Switcher
-    function setEngine(engine) {
-      currentEngine = engine;
-      const fastBtn = document.getElementById('engineFastBtn');
-      const geminiBtn = document.getElementById('engineGeminiBtn');
+    function switchTab(tab) {
+      const viewLive = document.getElementById('viewLive');
+      const viewHistory = document.getElementById('viewHistory');
+      const tabLiveBtn = document.getElementById('tabLiveBtn');
+      const tabHistoryBtn = document.getElementById('tabHistoryBtn');
 
-      if (engine === 'fast') {
-        fastBtn.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition shadow-sm";
-        geminiBtn.className = "px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
-        showToast("Moteur rapide sélectionné");
+      if (tab === 'live') {
+        viewLive.classList.remove('hidden');
+        viewLive.classList.add('flex');
+        viewHistory.classList.add('hidden');
+        viewHistory.classList.remove('flex');
+        tabLiveBtn.className = "flex-1 py-2.5 text-xs font-bold text-indigo-400 border-b-2 border-indigo-500 flex items-center justify-center space-x-2";
+        tabHistoryBtn.className = "flex-1 py-2.5 text-xs font-bold text-slate-400 border-b-2 border-transparent flex items-center justify-center space-x-2";
       } else {
-        geminiBtn.className = "px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition shadow-sm";
-        fastBtn.className = "px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition";
-        showToast("Moteur IA Gemini sélectionné");
+        viewHistory.classList.remove('hidden');
+        viewHistory.classList.add('flex');
+        viewLive.classList.add('hidden');
+        viewLive.classList.remove('flex');
+        tabHistoryBtn.className = "flex-1 py-2.5 text-xs font-bold text-indigo-400 border-b-2 border-indigo-500 flex items-center justify-center space-x-2";
+        tabLiveBtn.className = "flex-1 py-2.5 text-xs font-bold text-slate-400 border-b-2 border-transparent flex items-center justify-center space-x-2";
       }
     }
 
-    // History Log Management
+    function setEngine(engine) {
+      currentEngine = engine;
+      document.getElementById('engineFastBtn').className = engine === 'fast' ? "px-2 py-1 text-[11px] font-semibold rounded-md bg-indigo-600 text-white" : "px-2 py-1 text-[11px] font-semibold rounded-md text-slate-400";
+      document.getElementById('engineGeminiBtn').className = engine === 'gemini' ? "px-2 py-1 text-[11px] font-semibold rounded-md bg-indigo-600 text-white" : "px-2 py-1 text-[11px] font-semibold rounded-md text-slate-400";
+      showToast(engine === 'fast' ? "Traduction ultra-rapide" : "Moteur Gemini AI");
+    }
+
     function addHistoryItem(original, translated) {
-      const item = {
-        id: Date.now(),
+      history.push({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        original: original,
-        translated: translated
-      };
-      history.push(item);
+        original, translated
+      });
       renderHistory();
     }
 
     function renderHistory() {
       const list = document.getElementById('historyList');
-      const count = document.getElementById('historyCount');
-      count.innerText = history.length;
-
-      if (history.length === 0) {
-        list.innerHTML = `
-          <div id="emptyHistory" class="text-center py-12 text-slate-500">
-            <i class="fa-solid fa-book-open text-3xl mb-3 block opacity-40"></i>
-            <p class="text-xs">Les blocs de phrases traduites s'enregistreront automatiquement ici pendant le cours.</p>
-          </div>`;
-        return;
-      }
+      document.getElementById('historyBadge').innerText = history.length;
+      if (history.length === 0) return;
 
       list.innerHTML = history.map(item => `
-        <div class="bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 space-y-1.5 transition hover:border-slate-600">
-          <div class="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-            <span>${item.time}</span>
-            <button onclick="copyToClipboard('${escapeQuotes(item.translated)}')" class="hover:text-indigo-400 transition" title="Copier cette phrase">
-              <i class="fa-regular fa-copy"></i>
-            </button>
-          </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-1">
+          <div class="text-[10px] text-slate-500 font-mono">${item.time}</div>
           <p class="text-xs text-slate-400 italic">${item.original}</p>
-          <p class="text-sm text-slate-100 font-medium">${item.translated}</p>
+          <p class="text-xs sm:text-sm text-slate-100 font-medium">${item.translated}</p>
         </div>
       `).join('');
     }
 
-    function clearHistory() {
-      if (confirm("Voulez-vous effacer tout l'historique de ce cours ?")) {
-        history = [];
-        renderHistory();
-        showToast("Historique effacé");
-      }
-    }
-
     function clearCurrentBox() {
       finalOriginalText = '';
-      document.getElementById('liveOriginalText').innerText = "Zone réinitialisée. En attente de paroles...";
+      document.getElementById('liveOriginalText').innerText = "Zone réinitialisée...";
       document.getElementById('liveTranslatedText').innerText = "Zone réinitialisée.";
     }
 
-    // Copy / Export Tools
     function copyFullTranscript() {
-      if (history.length === 0) {
-        showToast("Aucun historique à copier", "error");
-        return;
-      }
-      const fullText = history.map(h => `[${h.time}]\nES: ${h.original}\nFR: ${h.translated}`).join('\n\n');
-      copyToClipboard(fullText);
-      showToast("Cours complet copié dans le presse-papier !");
+      if (!history.length) return showToast("Historique vide", "error");
+      const text = history.map(h => `[${h.time}]\nES: ${h.original}\nFR: ${h.translated}`).join('\n\n');
+      navigator.clipboard ? navigator.clipboard.writeText(text) : copyFallback(text);
+      showToast("Cours copié !");
     }
 
     function downloadTranscript() {
-      if (history.length === 0) {
-        showToast("Rien à télécharger", "error");
-        return;
-      }
-      const fullText = "NOTES DE COURS ERASMUS\nDate: " + new Date().toLocaleDateString() + "\n\n" +
-        history.map(h => `[${h.time}]\nOriginal: ${h.original}\nTraduction: ${h.translated}`).join('\n\n---\n\n');
-      
-      const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
+      if (!history.length) return showToast("Historique vide", "error");
+      const text = "COURS ERASMUS\n\n" + history.map(h => `[${h.time}]\nOriginal: ${h.original}\nTraduction: ${h.translated}`).join('\n\n');
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `Cours_Erasmus_${new Date().toISOString().slice(0,10)}.txt`;
+      a.href = URL.createObjectURL(blob);
+      a.download = `Cours_${new Date().toISOString().slice(0,10)}.txt`;
       a.click();
-      URL.revokeObjectURL(url);
-      showToast("Fichier texte téléchargé");
     }
 
-    function copyToClipboard(text) {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
+    function copyFallback(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
       document.execCommand('copy');
-      document.body.removeChild(textarea);
+      document.body.removeChild(ta);
     }
 
-    // Text to Speech for Translation
     function speakTranslation() {
       const text = document.getElementById('liveTranslatedText').innerText;
-      if (!text || text.includes('s\'affichera')) return;
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = document.getElementById('targetLang').value;
-      window.speechSynthesis.speak(utterance);
+      if (!text || text.includes('apparaîtra')) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'fr-FR';
+      window.speechSynthesis.speak(u);
     }
 
-    // UI Helpers & Settings
-    function toggleAutoScroll() {
-      autoScroll = !autoScroll;
-      const btn = document.getElementById('autoScrollBtn');
-      btn.innerHTML = autoScroll 
-        ? `<i class="fa-solid fa-arrow-down-short-wide mr-1"></i> Auto-Défilement: ON`
-        : `<i class="fa-solid fa-pause mr-1"></i> Auto-Défilement: OFF`;
+    function toggleFontSize() {
+      fontSizeLarge = !fontSizeLarge;
+      const el = document.getElementById('liveTranslatedText');
+      el.className = fontSizeLarge ? "text-white font-bold text-2xl sm:text-4xl leading-relaxed min-h-[4.5rem]" : "text-white font-bold text-xl sm:text-2xl leading-relaxed min-h-[4.5rem]";
+    }
+
+    function openApiKeyModal() { document.getElementById('apiKeyModal').classList.remove('hidden'); }
+    function closeApiKeyModal() { document.getElementById('apiKeyModal').classList.add('hidden'); }
+    function saveApiKey() {
+      geminiApiKey = document.getElementById('geminiApiKeyInput').value.trim();
+      localStorage.setItem('gemini_api_key', geminiApiKey);
+      updateApiKeyStatusUI();
+      closeApiKeyModal();
+      showToast("Clé sauvegardée");
+    }
+
+    function updateApiKeyStatusUI() {
+      document.getElementById('apiKeyStatusText').innerText = geminiApiKey ? "Gemini ✓" : "Gemini";
     }
 
     function scrollToBottom() {
@@ -659,71 +522,13 @@
       area.scrollTop = area.scrollHeight;
     }
 
-    function toggleFontSize() {
-      fontSizeLarge = !fontSizeLarge;
-      const transText = document.getElementById('liveTranslatedText');
-      if (fontSizeLarge) {
-        transText.classList.remove('text-xl', 'sm:text-2xl');
-        transText.classList.add('text-2xl', 'sm:text-4xl');
-      } else {
-        transText.classList.remove('text-2xl', 'sm:text-4xl');
-        transText.classList.add('text-xl', 'sm:text-2xl');
-      }
-    }
-
-    function openApiKeyModal() {
-      document.getElementById('geminiApiKeyInput').value = geminiApiKey;
-      document.getElementById('apiKeyModal').classList.remove('hidden');
-    }
-
-    function closeApiKeyModal() {
-      document.getElementById('apiKeyModal').classList.add('hidden');
-    }
-
-    function saveApiKey() {
-      const key = document.getElementById('geminiApiKeyInput').value.trim();
-      geminiApiKey = key;
-      localStorage.setItem('gemini_api_key', key);
-      updateApiKeyStatusUI();
-      closeApiKeyModal();
-      showToast("Clé API Gemini sauvegardée");
-    }
-
-    function updateApiKeyStatusUI() {
-      const statusText = document.getElementById('apiKeyStatusText');
-      if (geminiApiKey) {
-        statusText.innerText = "Gemini Actif ✓";
-        statusText.classList.add('text-emerald-400');
-      } else {
-        statusText.innerText = "Clé Gemini (Optionnel)";
-        statusText.classList.remove('text-emerald-400');
-      }
-    }
-
-    function showToast(message, type = "success") {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toastMessage');
-      const toastIcon = document.getElementById('toastIcon');
-
-      toastMsg.innerText = message;
-      if (type === "error") {
-        toast.classList.remove('bg-indigo-600');
-        toast.classList.add('bg-rose-600');
-        toastIcon.className = "fa-solid fa-circle-exclamation";
-      } else {
-        toast.classList.remove('bg-rose-600');
-        toast.classList.add('bg-indigo-600');
-        toastIcon.className = "fa-solid fa-circle-check";
-      }
-
-      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+    function showToast(msg, type = "success") {
+      const t = document.getElementById('toast');
+      document.getElementById('toastMessage').innerText = msg;
+      t.className = `fixed bottom-20 left-1/2 -translate-x-1/2 ${type === 'error' ? 'bg-rose-600' : 'bg-indigo-600'} text-white px-4 py-2.5 rounded-full shadow-2xl text-xs font-semibold transition-all duration-300 transform translate-y-0 opacity-100 z-50 whitespace-nowrap`;
       setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
-      }, 3000);
-    }
-
-    function escapeQuotes(str) {
-      return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        t.className = t.className.replace('translate-y-0 opacity-100', 'translate-y-10 opacity-0 pointer-events-none');
+      }, 2500);
     }
   </script>
 </body>
