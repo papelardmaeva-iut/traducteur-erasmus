@@ -85,22 +85,16 @@
       <!-- Top Settings Strip -->
       <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs shrink-0">
         <div class="flex items-center space-x-2">
-          <span class="text-slate-400 font-medium">Écoute:</span>
-          <select id="sourceLang" class="bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-slate-200 focus:outline-none">
-            <option value="es-ES" selected>🇪🇸 Espagnol</option>
-            <option value="en-US">🇺🇸 Anglais</option>
-            <option value="de-DE">🇩🇪 Allemand</option>
-            <option value="it-IT">🇮🇹 Italien</option>
-          </select>
+          <span class="text-slate-400 font-medium">Mode Pro:</span>
+          <span class="bg-indigo-900/40 text-indigo-300 border border-indigo-500/30 rounded-md px-2 py-1 flex items-center space-x-1.5 font-semibold">
+            <i class="fa-solid fa-sparkles text-amber-400"></i>
+            <span>Gemini Audio</span>
+          </span>
         </div>
 
-        <div class="flex items-center space-x-1.5">
-          <button id="engineFastBtn" onclick="setEngine('fast')" class="px-2 py-1 text-[11px] font-semibold rounded-md bg-indigo-600 text-white">
-            Rapide
-          </button>
-          <button id="engineGeminiBtn" onclick="setEngine('gemini')" class="px-2 py-1 text-[11px] font-semibold rounded-md text-slate-400">
-            Gemini
-          </button>
+        <div class="text-[10px] text-slate-500 flex items-center space-x-1 font-medium">
+           <i class="fa-solid fa-circle-check text-emerald-500"></i>
+           <span>Qualité Amphi</span>
         </div>
       </div>
 
@@ -121,7 +115,7 @@
               <i class="fa-solid fa-ear-listen mr-1.5"></i> Espagnol (Direct)
             </div>
             <p id="liveOriginalText" class="text-slate-300 text-base sm:text-lg italic leading-relaxed min-h-[3rem]">
-              Appuyez sur le gros bouton vert en bas pour commencer l'écoute du professeur.
+              Appuyez sur le micro. Le mode Gemini Audio analysera le cours par séquences de 5 secondes.
             </p>
           </div>
 
@@ -219,146 +213,123 @@
   <!-- Application Logic -->
   <script>
     let isRecording = false;
-    let recognition = null;
-    let currentEngine = 'fast';
+    let globalStream = null;
     let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
     let history = [];
     let fontSizeLarge = false;
-    let finalOriginalText = '';
-    let translationTimeout = null;
+    let liveTextsES = [];
+    let liveTextsFR = [];
 
     window.onload = function() {
-      checkSpeechRecognitionSupport();
       updateApiKeyStatusUI();
+      // Prompt user for API key immediately if not present for Pro mode
+      if (!geminiApiKey) {
+        setTimeout(openApiKeyModal, 500);
+      }
     };
 
-    function checkSpeechRecognitionSupport() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        showToast("Navigateur non compatible. Utilisez Google Chrome sur Android ou Safari sur iOS.", "error");
-        document.getElementById('toggleRecordBtn').disabled = true;
-        document.getElementById('statusText').innerText = "Incompatible";
+    async function toggleRecording() {
+      if (!geminiApiKey) {
+        showToast("Clé API requise pour le mode Pro", "error");
+        openApiKeyModal();
         return;
       }
+      if (isRecording) {
+        stopRecording();
+      } else {
+        await startRecording();
+      }
+    }
 
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = function() {
+    async function startRecording() {
+      try {
+        globalStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: { 
+                echoCancellation: true, 
+                noiseSuppression: true,
+                autoGainControl: true 
+            } 
+        });
         isRecording = true;
         updateRecordingUI(true);
-        showToast("Écoute active");
-      };
-
-      recognition.onerror = function(event) {
-        console.error("Speech Recognition Error:", event.error);
-        if (event.error === 'not-allowed') {
-          showToast("Veuillez autoriser l'accès au microphone", "error");
-          stopRecording();
-        }
-      };
-
-      recognition.onend = function() {
-        if (isRecording) {
-          try { recognition.start(); } catch(e) {}
-        } else {
-          updateRecordingUI(false);
-        }
-      };
-
-      recognition.onresult = function(event) {
-        let interimTranscript = '';
-        let finalTranscriptChunk = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscriptChunk += event.results[i][0].transcript + ' ';
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-
-        const displayOriginal = (finalOriginalText + ' ' + finalTranscriptChunk + interimTranscript).trim();
-        document.getElementById('liveOriginalText').innerText = displayOriginal || "En attente de paroles...";
-
-        const textToTranslate = (finalTranscriptChunk + interimTranscript).trim();
-        if (textToTranslate) {
-          debouncedTranslate(textToTranslate, event.results[event.results.length - 1].isFinal);
-        }
-
-        if (finalTranscriptChunk.trim()) {
-          finalOriginalText += finalTranscriptChunk;
-          const chunk = finalTranscriptChunk.trim();
-          translateText(chunk).then(translatedChunk => {
-            if (translatedChunk) {
-              addHistoryItem(chunk, translatedChunk);
-            }
-          });
-        }
-        scrollToBottom();
-      };
-    }
-
-    function toggleRecording() {
-      if (!recognition) {
-        checkSpeechRecognitionSupport();
-        if (!recognition) return;
+        showToast("Écoute audio active (Gemini Pro)");
+        document.getElementById('liveOriginalText').innerText = "Écoute de l'amphi en cours...";
+        document.getElementById('liveTranslatedText').innerText = "Analyse audio par séquences...";
+        captureLoop();
+      } catch (err) {
+        console.error("Mic error:", err);
+        showToast("Erreur d'accès au microphone", "error");
       }
-      if (isRecording) stopRecording(); else startRecording();
-    }
-
-    function startRecording() {
-      recognition.lang = document.getElementById('sourceLang').value;
-      try { recognition.start(); } catch(e) {}
     }
 
     function stopRecording() {
       isRecording = false;
-      if (recognition) recognition.stop();
-      updateRecordingUI(false);
-      showToast("Écoute mise en pause");
-    }
-
-    function debouncedTranslate(text, isFinal) {
-      clearTimeout(translationTimeout);
-      translationTimeout = setTimeout(() => {
-        translateText(text).then(translated => {
-          if (translated) {
-            document.getElementById('liveTranslatedText').innerText = translated;
-            scrollToBottom();
-          }
-        });
-      }, isFinal ? 100 : 350);
-    }
-
-    async function translateText(text) {
-      if (!text) return '';
-      const source = document.getElementById('sourceLang').value.split('-')[0];
-      if (currentEngine === 'gemini') {
-        return await translateWithGemini(text, source, 'fr');
-      } else {
-        return await translateWithMyMemory(text, source, 'fr');
+      if (globalStream) {
+        globalStream.getTracks().forEach(track => track.stop());
+        globalStream = null;
       }
+      updateRecordingUI(false);
+      showToast("Écoute terminée");
     }
 
-    async function translateWithMyMemory(text, source, target) {
-      try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data && data.responseData) return data.responseData.translatedText;
-      } catch (err) {}
-      return text;
+    function captureLoop() {
+       if (!isRecording || !globalStream) return;
+       const recorder = new MediaRecorder(globalStream);
+       const chunks = [];
+       recorder.ondataavailable = e => {
+           if (e.data.size > 0) chunks.push(e.data);
+       };
+       recorder.onstop = async () => {
+          if (chunks.length > 0) {
+              const blob = new Blob(chunks, { type: recorder.mimeType });
+              const b64 = await blobToBase64(blob);
+              processAudioChunk(b64, recorder.mimeType);
+          }
+       };
+       recorder.start();
+       
+       // Record in 5-second chunks for continuous contextual processing
+       setTimeout(() => {
+          if (recorder.state === "recording") {
+              recorder.stop();
+              captureLoop(); // start the next chunk immediately
+          }
+       }, 5000);
     }
 
-    async function translateWithGemini(text, source, target) {
+    function blobToBase64(blob) {
+      return new Promise((resolve, _) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function processAudioChunk(base64Data, mimeType) {
+      if (!isRecording) return; 
       const apiKey = geminiApiKey || "";
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const base64String = base64Data.split(',')[1];
+      if (!base64String) return;
+
       const payload = {
-        contents: [{ parts: [{ text: text }] }],
-        systemInstruction: { parts: [{ text: "Tu es un traducteur simultané universitaire. Traduis fidèlement ce texte espagnol vers le français. Réponds UNIQUEMENT avec la traduction." }] }
+        contents: [
+          {
+            parts: [
+              { text: "Tu es un traducteur de cours magistral. Écoute cet extrait audio en espagnol. Transcris l'espagnol et traduis-le en français. Si le son est inaudible, vide, ou du bruit blanc, renvoie des chaînes vides. Réponds UNIQUEMENT avec ce JSON: {\"es\": \"Transcription en espagnol\", \"fr\": \"Traduction en français\"}" },
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: base64String
+                }
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
       };
 
       try {
@@ -367,15 +338,37 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        
+        if (!response.ok) throw new Error("Erreur de l'API Gemini");
+
         const data = await response.json();
         const candidate = data.candidates?.[0];
         if (candidate && candidate.content?.parts?.[0]?.text) {
-          return candidate.content.parts[0].text.trim();
+          const jsonText = candidate.content.parts[0].text;
+          const result = JSON.parse(jsonText);
+          
+          if (result.es && result.fr && result.es.trim().length > 2 && result.fr.trim().length > 2) {
+             displayResults(result.es.trim(), result.fr.trim());
+          }
         }
       } catch (e) {
-        return await translateWithMyMemory(text, source, target);
+        console.error("Gemini API Error:", e);
       }
-      return text;
+    }
+
+    function displayResults(esText, frText) {
+      liveTextsES.push(esText);
+      liveTextsFR.push(frText);
+      
+      // Keep only last 2 chunks on screen for readability
+      if (liveTextsES.length > 2) liveTextsES.shift();
+      if (liveTextsFR.length > 2) liveTextsFR.shift();
+      
+      document.getElementById('liveOriginalText').innerText = liveTextsES.join(' ... ');
+      document.getElementById('liveTranslatedText').innerText = liveTextsFR.join(' ... ');
+      
+      addHistoryItem(esText, frText);
+      scrollToBottom();
     }
 
     function updateRecordingUI(recording) {
@@ -458,7 +451,8 @@
     }
 
     function clearCurrentBox() {
-      finalOriginalText = '';
+      liveTextsES = [];
+      liveTextsFR = [];
       document.getElementById('liveOriginalText').innerText = "Zone réinitialisée...";
       document.getElementById('liveTranslatedText').innerText = "Zone réinitialisée.";
     }
